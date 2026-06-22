@@ -5,7 +5,7 @@ version: 0.1.0
 readme: README.md
 authors:
   - Adam Munawar Rahman
-description: Idempotent Ansible modules for CKAN open-data portal resources (datasets, organizations, users) via the Action API
+description: Ansible modules for managing CKAN open-data portal resources (datasets, organizations, users, groups, resources, API tokens) via the Action API
 license: GPL-3.0-or-later
 license_file: COPYING
 tags:
@@ -15,7 +15,6 @@ tags:
   - datacatalog
   - portal
   - open-data
-  - idempotent
   - api
 dependencies: {}
 repository: https://github.com/msradam/msradam.ckan

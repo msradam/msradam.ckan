@@ -11,7 +11,7 @@ Release Summary
 ---------------
 
 Initial release of the msradam.ckan Ansible collection.
-Provides idempotent modules for managing CKAN open-data portal resources
+Provides modules for managing CKAN open-data portal resources
 via the CKAN Action API. Validated against CKAN 2.11.5.
 
 Minor Changes
