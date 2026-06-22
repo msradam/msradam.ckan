@@ -1,0 +1,8 @@
+*.pyc
+__pycache__/
+*.retry
+*.tar.gz
+/tests/output/
+/changelogs/.plugin-cache.yaml
+.venv/
+/dist/

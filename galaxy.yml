@@ -1,0 +1,39 @@
+---
+namespace: msradam
+name: ckan
+version: 0.1.0
+readme: README.md
+authors:
+  - Adam Munawar Rahman
+description: Idempotent Ansible modules for CKAN open-data portal resources (datasets, organizations, users) via the Action API
+license: GPL-3.0-or-later
+license_file: COPYING
+tags:
+  - ckan
+  - opendata
+  - data
+  - datacatalog
+  - portal
+  - open-data
+  - idempotent
+  - api
+dependencies: {}
+repository: https://github.com/msradam/msradam.ckan
+documentation: https://github.com/msradam/msradam.ckan/blob/main/README.md
+homepage: https://github.com/msradam/msradam.ckan
+issues: https://github.com/msradam/msradam.ckan/issues
+build_ignore:
+  - .gitignore
+  - .ansible-lint
+  - .venv
+  - .ckan-test-tree
+  - DESIGN.md
+  - Makefile
+  - changelogs/.plugin-cache.yaml
+  - dist
+  - docs
+  - roles
+  - '*.tar.gz'
+  - tests/output
+  - tests/unit
+  - tests/smoke.yml

@@ -1,0 +1,135 @@
+---
+# Integration tests for msradam.ckan.ckan_dataset.
+#
+# Requires a reachable CKAN instance and a sysadmin (or editor) API token:
+#   export CKAN_URL=http://127.0.0.1:5000
+#   export CKAN_API_TOKEN=<token>
+#   ansible-test integration ckan_dataset
+
+- name: Verify connection variables are set
+  ansible.builtin.assert:
+    that:
+      - ckan_url | length > 0
+      - ckan_api_token | length > 0
+    fail_msg: "Set CKAN_URL and CKAN_API_TOKEN before running these tests."
+
+- name: Ensure the test organization exists
+  ansible.builtin.uri:
+    url: "{{ ckan_url }}/api/3/action/organization_create"
+    method: POST
+    headers:
+      Authorization: "{{ ckan_api_token }}"
+    body_format: json
+    body:
+      name: "{{ test_org }}"
+      title: Ansible CKAN integration test org
+    status_code: [200, 409]
+
+- module_defaults:
+    group/msradam.ckan.ckan:
+      url: "{{ ckan_url }}"
+      api_token: "{{ ckan_api_token }}"
+  block:
+    - name: Start from a clean slate
+      msradam.ckan.ckan_dataset:
+        name: "{{ test_dataset_name }}"
+        state: absent
+        purge: true
+
+    - name: Create dataset (check mode)
+      msradam.ckan.ckan_dataset:
+        name: "{{ test_dataset_name }}"
+        title: Integration Test Dataset
+        owner_org: "{{ test_org }}"
+        state: present
+      check_mode: true
+      register: create_check
+
+    - name: Dataset still absent after check mode
+      msradam.ckan.ckan_dataset_info:
+        name: "{{ test_dataset_name }}"
+      register: after_check
+      ignore_errors: true
+
+    - name: Create dataset
+      msradam.ckan.ckan_dataset:
+        name: "{{ test_dataset_name }}"
+        title: Integration Test Dataset
+        owner_org: "{{ test_org }}"
+        notes: Created by the integration test.
+        tags:
+          - ansible
+          - integration
+        state: present
+      register: create
+
+    - name: Create dataset again (idempotent)
+      msradam.ckan.ckan_dataset:
+        name: "{{ test_dataset_name }}"
+        title: Integration Test Dataset
+        owner_org: "{{ test_org }}"
+        notes: Created by the integration test.
+        tags:
+          - ansible
+          - integration
+        state: present
+      register: create_again
+
+    - name: Update the title only
+      msradam.ckan.ckan_dataset:
+        name: "{{ test_dataset_name }}"
+        title: Updated Integration Test Dataset
+        state: present
+      register: update
+
+    - name: Update is idempotent
+      msradam.ckan.ckan_dataset:
+        name: "{{ test_dataset_name }}"
+        title: Updated Integration Test Dataset
+        state: present
+      register: update_again
+
+    - name: Fetch the dataset
+      msradam.ckan.ckan_dataset_info:
+        name: "{{ test_dataset_name }}"
+      register: info
+
+    - name: Assert create/update behaviour
+      ansible.builtin.assert:
+        that:
+          - create_check is changed
+          - after_check is failed
+          - create is changed
+          - create.dataset.name == test_dataset_name
+          - create_again is not changed
+          - update is changed
+          - update_again is not changed
+          - info.dataset.title == 'Updated Integration Test Dataset'
+          - "'ansible' in (info.dataset.tags | map(attribute='name') | list)"
+
+    - name: Soft delete the dataset
+      msradam.ckan.ckan_dataset:
+        name: "{{ test_dataset_name }}"
+        state: absent
+      register: delete
+
+    - name: Soft delete again (idempotent)
+      msradam.ckan.ckan_dataset:
+        name: "{{ test_dataset_name }}"
+        state: absent
+      register: delete_again
+
+    - name: Assert delete behaviour
+      ansible.builtin.assert:
+        that:
+          - delete is changed
+          - delete_again is not changed
+
+  always:
+    - name: Purge the test dataset
+      msradam.ckan.ckan_dataset:
+        url: "{{ ckan_url }}"
+        api_token: "{{ ckan_api_token }}"
+        name: "{{ test_dataset_name }}"
+        state: absent
+        purge: true

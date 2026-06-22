@@ -1,0 +1,93 @@
+---
+# Onboard a new publisher onto a CKAN instance.
+#
+# Creates the organization, a user account for the publisher contact, and
+# assigns them the requested role. Safe to re-run: all operations are
+# idempotent, so running this a second time with the same vars makes no
+# changes.
+#
+# Usage:
+#   export CKAN_URL=https://your-ckan.example.com
+#   export CKAN_API_TOKEN=<sysadmin token>
+#
+#   ansible-playbook playbooks/onboard_publisher.yml \
+#     -e org_name=environment-agency \
+#     -e org_title="Environment Agency" \
+#     -e contact_name=easmith \
+#     -e contact_email=smith@environment.gov \
+#     -e contact_password=ChangeMe123 \
+#     -e contact_fullname="Emma Smith" \
+#     -e contact_role=editor
+
+- name: Onboard a CKAN publisher
+  hosts: localhost
+  gather_facts: false
+
+  vars:
+    ckan_url: "{{ lookup('env', 'CKAN_URL') | mandatory }}"
+    ckan_api_token: "{{ lookup('env', 'CKAN_API_TOKEN') | mandatory }}"
+
+    # Override all of these on the command line or in a vars file.
+    org_name: my-organization
+    org_title: My Organization
+    org_description: ""
+
+    contact_name: publisher
+    contact_email: publisher@example.com
+    contact_password: ""   # required on first create; leave empty to skip on subsequent runs
+    contact_fullname: ""
+    contact_role: editor   # admin | editor | member
+
+  module_defaults:
+    group/msradam.ckan.ckan:
+      url: "{{ ckan_url }}"
+      api_token: "{{ ckan_api_token }}"
+
+  tasks:
+    - name: Verify CKAN connectivity
+      msradam.ckan.ckan_status_info:
+      register: ckan_status
+
+    - name: Show CKAN version
+      ansible.builtin.debug:
+        msg: "Connected to CKAN {{ ckan_status.status.ckan_version }} at {{ ckan_url }}"
+
+    - name: Create organization
+      msradam.ckan.ckan_organization:
+        name: "{{ org_name }}"
+        title: "{{ org_title }}"
+        description: "{{ org_description | default(omit) }}"
+        state: present
+      register: org
+
+    - name: Create publisher user account
+      msradam.ckan.ckan_user:
+        name: "{{ contact_name }}"
+        email: "{{ contact_email }}"
+        password: "{{ contact_password | default(omit, true) }}"
+        fullname: "{{ contact_fullname | default(omit, true) }}"
+        state: present
+      register: user
+
+    - name: Assign publisher to organization
+      msradam.ckan.ckan_organization_member:
+        organization: "{{ org_name }}"
+        username: "{{ contact_name }}"
+        capacity: "{{ contact_role }}"
+        state: present
+      register: membership
+
+    - name: Verify membership
+      msradam.ckan.ckan_organization_info:
+        name: "{{ org_name }}"
+      register: org_info
+
+    - name: Summary
+      ansible.builtin.debug:
+        msg:
+          - "Organization : {{ org_info.organization.name }} ({{ org_info.organization.title }})"
+          - "User         : {{ contact_name }} <{{ contact_email }}>"
+          - "Role         : {{ contact_role }} in {{ org_name }}"
+          - "Org changed  : {{ org.changed }}"
+          - "User changed : {{ user.changed }}"
+          - "Member changed: {{ membership.changed }}"

@@ -1,0 +1,100 @@
+---
+# Synchronize a catalog of datasets to a CKAN instance.
+#
+# Reads a list of dataset definitions from the `datasets` variable and
+# ensures every entry exists with the declared metadata. Fields not
+# declared in an entry are left untouched on existing datasets.
+# Safe to re-run: unchanged datasets report ok, not changed.
+#
+# Usage:
+#   export CKAN_URL=https://your-ckan.example.com
+#   export CKAN_API_TOKEN=<sysadmin or editor token>
+#
+#   # With inline vars:
+#   ansible-playbook playbooks/publish_catalog.yml \
+#     -e owner_org=environment-agency
+#
+#   # Or point at a vars file that defines `datasets`:
+#   ansible-playbook playbooks/publish_catalog.yml \
+#     -e @catalog.yml
+
+- name: Publish a dataset catalog to CKAN
+  hosts: localhost
+  gather_facts: false
+
+  vars:
+    ckan_url: "{{ lookup('env', 'CKAN_URL') | mandatory }}"
+    ckan_api_token: "{{ lookup('env', 'CKAN_API_TOKEN') | mandatory }}"
+
+    # Default owning organization. Can be overridden per dataset entry.
+    owner_org: ""
+
+    # Define your catalog here or supply via -e @catalog.yml.
+    # Every key maps directly to a ckan_dataset parameter.
+    datasets:
+      - name: air-quality-readings-2024
+        title: Air Quality Readings 2024
+        notes: Hourly particulate matter and ozone readings from 120 monitoring stations.
+        license_id: uk-ogl
+        tags: [air-quality, environment, hourly]
+        extras:
+          update_frequency: hourly
+          geographic_coverage: national
+
+      - name: flood-risk-zones-2024
+        title: Flood Risk Zones 2024
+        notes: Environment Agency flood risk map updated for 2024.
+        license_id: uk-ogl
+        tags: [flood, risk, mapping, environment]
+        extras:
+          update_frequency: annual
+
+      - name: river-flow-monitoring
+        title: River Flow Monitoring
+        notes: Daily river level and flow readings across major catchments.
+        license_id: uk-ogl
+        tags: [rivers, hydrology, environment]
+
+  module_defaults:
+    group/msradam.ckan.ckan:
+      url: "{{ ckan_url }}"
+      api_token: "{{ ckan_api_token }}"
+
+  tasks:
+    - name: Verify CKAN connectivity
+      msradam.ckan.ckan_status_info:
+      register: ckan_status
+
+    - name: Show CKAN version
+      ansible.builtin.debug:
+        msg: "Connected to CKAN {{ ckan_status.status.ckan_version }} at {{ ckan_url }}"
+
+    - name: Ensure each dataset exists with declared metadata
+      msradam.ckan.ckan_dataset:
+        name: "{{ item.name }}"
+        title: "{{ item.title | default(omit) }}"
+        notes: "{{ item.notes | default(omit) }}"
+        owner_org: "{{ item.owner_org | default(owner_org) | default(omit, true) }}"
+        license_id: "{{ item.license_id | default(omit) }}"
+        tags: "{{ item.tags | default(omit) }}"
+        extras: "{{ item.extras | default(omit) }}"
+        private: "{{ item.private | default(omit) }}"
+        state: present
+      loop: "{{ datasets }}"
+      loop_control:
+        label: "{{ item.name }}"
+      register: sync_results
+
+    - name: Search to confirm published count
+      msradam.ckan.ckan_dataset_search:
+        fq: "{{ 'organization:' + owner_org if owner_org else '' }}"
+        rows: 0
+      register: search
+      when: owner_org | length > 0
+
+    - name: Catalog sync summary
+      ansible.builtin.debug:
+        msg:
+          - "Datasets declared : {{ datasets | length }}"
+          - "Changed           : {{ sync_results.results | selectattr('changed') | list | length }}"
+          - "Unchanged         : {{ sync_results.results | rejectattr('changed') | list | length }}"

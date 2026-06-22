@@ -1,0 +1,30 @@
+---
+name: Unit tests
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  units:
+    name: "ansible-test units (Python ${{ matrix.python }})"
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: ansible_collections/msradam/ckan
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "${{ matrix.python }}"
+
+      - name: Install dependencies
+        run: pip install "ansible-core>=2.15" pytest pytest-mock
+
+      - name: Run unit tests
+        working-directory: ansible_collections/msradam/ckan
+        run: ansible-test units --python "${{ matrix.python }}" --local

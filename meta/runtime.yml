@@ -1,0 +1,14 @@
+---
+requires_ansible: '>=2.15.0'
+action_groups:
+  ckan:
+    - ckan_dataset
+    - ckan_dataset_info
+    - ckan_dataset_search
+    - ckan_organization
+    - ckan_organization_info
+    - ckan_organization_member
+    - ckan_group
+    - ckan_user
+    - ckan_user_info
+    - ckan_status_info

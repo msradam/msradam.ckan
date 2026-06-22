@@ -1,0 +1,5 @@
+---
+ckan_url: "{{ lookup('env', 'CKAN_URL') }}"
+ckan_api_token: "{{ lookup('env', 'CKAN_API_TOKEN') }}"
+test_dataset_name: ansible-ckan-itest
+test_org: ansible-ckan-itest-org

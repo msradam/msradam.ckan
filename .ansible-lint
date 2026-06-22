@@ -1,0 +1,9 @@
+---
+profile: production
+exclude_paths:
+  - .venv/
+  - .ckan-test-tree/
+  - tests/output/
+warn_list:
+  - experimental
+  - yaml[line-length]

@@ -1,0 +1,320 @@
+---
+- name: msradam.ckan live smoke test
+  hosts: localhost
+  gather_facts: false
+  vars:
+    ckan_url: "{{ lookup('env', 'CKAN_URL') }}"
+    ckan_api_token: "{{ lookup('env', 'CKAN_API_TOKEN') }}"
+    ds: ansible-smoke-dataset
+    org: ansible-smoke-org
+    grp: ansible-smoke-group
+    smoke_user: ansible-smoke-user
+  module_defaults:
+    group/msradam.ckan.ckan:
+      url: "{{ ckan_url }}"
+      api_token: "{{ ckan_api_token }}"
+  tasks:
+    # ── connectivity ─────────────────────────────────────────────────────────
+    - name: Check CKAN version
+      msradam.ckan.ckan_status_info:
+      register: status
+
+    - name: Assert CKAN 2.10+
+      ansible.builtin.assert:
+        that: status.status.ckan_version is version('2.10', '>=')
+        fail_msg: "CKAN 2.10+ required; found {{ status.status.ckan_version }}"
+
+    # ── organization ─────────────────────────────────────────────────────────
+    - name: Org - clean slate
+      msradam.ckan.ckan_organization:
+        name: "{{ org }}"
+        state: absent
+        purge: true
+
+    - name: Org - create (check mode)
+      msradam.ckan.ckan_organization:
+        name: "{{ org }}"
+        title: Ansible Smoke Org
+        state: present
+      check_mode: true
+      register: org_cc
+
+    - name: Org - create
+      msradam.ckan.ckan_organization:
+        name: "{{ org }}"
+        title: Ansible Smoke Org
+        state: present
+      register: org_c1
+
+    - name: Org - create again (idempotent)
+      msradam.ckan.ckan_organization:
+        name: "{{ org }}"
+        title: Ansible Smoke Org
+        state: present
+      register: org_c2
+
+    - name: Org - update title
+      msradam.ckan.ckan_organization:
+        name: "{{ org }}"
+        title: Ansible Smoke Org Updated
+        state: present
+      register: org_u1
+
+    - name: Org - info
+      msradam.ckan.ckan_organization_info:
+        name: "{{ org }}"
+      register: org_info
+
+    - name: Org - assert
+      ansible.builtin.assert:
+        that:
+          - org_cc is changed
+          - org_c1 is changed
+          - org_c2 is not changed
+          - org_u1 is changed
+          - org_info.organization.title == 'Ansible Smoke Org Updated'
+
+    # ── group ────────────────────────────────────────────────────────────────
+    - name: Group - clean slate
+      msradam.ckan.ckan_group:
+        name: "{{ grp }}"
+        state: absent
+        purge: true
+
+    - name: Group - create
+      msradam.ckan.ckan_group:
+        name: "{{ grp }}"
+        title: Ansible Smoke Group
+        state: present
+      register: grp_c1
+
+    - name: Group - create again (idempotent)
+      msradam.ckan.ckan_group:
+        name: "{{ grp }}"
+        title: Ansible Smoke Group
+        state: present
+      register: grp_c2
+
+    - name: Group - assert
+      ansible.builtin.assert:
+        that:
+          - grp_c1 is changed
+          - grp_c2 is not changed
+
+    # ── user ─────────────────────────────────────────────────────────────────
+    - name: User - clean slate
+      msradam.ckan.ckan_user:
+        name: "{{ smoke_user }}"
+        state: absent
+
+    - name: User - create
+      msradam.ckan.ckan_user:
+        name: "{{ smoke_user }}"
+        email: "{{ smoke_user }}@smoke.test"
+        password: Sm0keTest!
+        fullname: Ansible Smoke User
+        state: present
+      register: user_c1
+
+    - name: User - create again (idempotent, no password)
+      msradam.ckan.ckan_user:
+        name: "{{ smoke_user }}"
+        email: "{{ smoke_user }}@smoke.test"
+        fullname: Ansible Smoke User
+        state: present
+      register: user_c2
+
+    - name: User - update fullname
+      msradam.ckan.ckan_user:
+        name: "{{ smoke_user }}"
+        fullname: Ansible Smoke User Updated
+        state: present
+      register: user_u1
+
+    - name: User - info
+      msradam.ckan.ckan_user_info:
+        name: "{{ smoke_user }}"
+      register: user_info
+
+    - name: User - assert
+      ansible.builtin.assert:
+        that:
+          - user_c1 is changed
+          - user_c2 is not changed
+          - user_u1 is changed
+          - user_info.user.fullname == 'Ansible Smoke User Updated'
+
+    # ── organization member ───────────────────────────────────────────────────
+    - name: Member - add as editor
+      msradam.ckan.ckan_organization_member:
+        organization: "{{ org }}"
+        username: "{{ smoke_user }}"
+        capacity: editor
+        state: present
+      register: mem_c1
+
+    - name: Member - add again (idempotent)
+      msradam.ckan.ckan_organization_member:
+        organization: "{{ org }}"
+        username: "{{ smoke_user }}"
+        capacity: editor
+        state: present
+      register: mem_c2
+
+    - name: Member - promote to admin
+      msradam.ckan.ckan_organization_member:
+        organization: "{{ org }}"
+        username: "{{ smoke_user }}"
+        capacity: admin
+        state: present
+      register: mem_u1
+
+    - name: Member - remove
+      msradam.ckan.ckan_organization_member:
+        organization: "{{ org }}"
+        username: "{{ smoke_user }}"
+        state: absent
+      register: mem_d1
+
+    - name: Member - remove again (idempotent)
+      msradam.ckan.ckan_organization_member:
+        organization: "{{ org }}"
+        username: "{{ smoke_user }}"
+        state: absent
+      register: mem_d2
+
+    - name: Member - assert
+      ansible.builtin.assert:
+        that:
+          - mem_c1 is changed
+          - mem_c2 is not changed
+          - mem_u1 is changed
+          - mem_d1 is changed
+          - mem_d2 is not changed
+
+    # ── dataset ───────────────────────────────────────────────────────────────
+    - name: Dataset - clean slate
+      msradam.ckan.ckan_dataset:
+        name: "{{ ds }}"
+        state: absent
+        purge: true
+
+    - name: Dataset - create (check mode)
+      msradam.ckan.ckan_dataset:
+        name: "{{ ds }}"
+        title: Smoke
+        owner_org: "{{ org }}"
+        state: present
+      check_mode: true
+      register: ds_cc
+
+    - name: Dataset - confirm check mode did not create
+      msradam.ckan.ckan_dataset_info:
+        name: "{{ ds }}"
+      register: after_check
+      ignore_errors: true
+
+    - name: Dataset - create
+      msradam.ckan.ckan_dataset:
+        name: "{{ ds }}"
+        title: Smoke Dataset
+        owner_org: "{{ org }}"
+        notes: hello world
+        tags: [smoke, ansible]
+        state: present
+      register: ds_c1
+
+    - name: Dataset - create again (idempotent)
+      msradam.ckan.ckan_dataset:
+        name: "{{ ds }}"
+        title: Smoke Dataset
+        owner_org: "{{ org }}"
+        notes: hello world
+        tags: [smoke, ansible]
+        state: present
+      register: ds_c2
+
+    - name: Dataset - update title
+      msradam.ckan.ckan_dataset:
+        name: "{{ ds }}"
+        title: Smoke Dataset Updated
+        state: present
+      register: ds_u1
+
+    - name: Dataset - update again (idempotent)
+      msradam.ckan.ckan_dataset:
+        name: "{{ ds }}"
+        title: Smoke Dataset Updated
+        state: present
+      register: ds_u2
+
+    - name: Dataset - search
+      msradam.ckan.ckan_dataset_search:
+        fq: "name:{{ ds }}"
+      register: search
+
+    - name: Dataset - info
+      msradam.ckan.ckan_dataset_info:
+        name: "{{ ds }}"
+      register: ds_info
+
+    - name: Dataset - soft delete
+      msradam.ckan.ckan_dataset:
+        name: "{{ ds }}"
+        state: absent
+      register: ds_d1
+
+    - name: Dataset - soft delete again (idempotent)
+      msradam.ckan.ckan_dataset:
+        name: "{{ ds }}"
+        state: absent
+      register: ds_d2
+
+    - name: Dataset - assert
+      ansible.builtin.assert:
+        that:
+          - ds_cc is changed
+          - after_check is failed
+          - ds_c1 is changed
+          - ds_c2 is not changed
+          - ds_u1 is changed
+          - ds_u2 is not changed
+          - search.count >= 1
+          - ds_info.dataset.title == 'Smoke Dataset Updated'
+          - "'smoke' in (ds_info.dataset.tags | map(attribute='name') | list)"
+          - ds_d1 is changed
+          - ds_d2 is not changed
+
+    # ── cleanup ───────────────────────────────────────────────────────────────
+    - name: Cleanup dataset
+      msradam.ckan.ckan_dataset:
+        name: "{{ ds }}"
+        state: absent
+        purge: true
+
+    - name: Cleanup user
+      msradam.ckan.ckan_user:
+        name: "{{ smoke_user }}"
+        state: absent
+
+    - name: Cleanup group
+      msradam.ckan.ckan_group:
+        name: "{{ grp }}"
+        state: absent
+        purge: true
+
+    - name: Cleanup org
+      msradam.ckan.ckan_organization:
+        name: "{{ org }}"
+        state: absent
+        purge: true
+
+    - name: Result summary
+      ansible.builtin.debug:
+        msg: >-
+          ckan={{ status.status.ckan_version }}
+          org={{ org_c1.changed }}/{{ org_c2.changed }}/{{ org_u1.changed }}
+          grp={{ grp_c1.changed }}/{{ grp_c2.changed }}
+          user={{ user_c1.changed }}/{{ user_c2.changed }}/{{ user_u1.changed }}
+          member={{ mem_c1.changed }}/{{ mem_c2.changed }}/{{ mem_u1.changed }}/{{ mem_d1.changed }}/{{ mem_d2.changed }}
+          dataset={{ ds_c1.changed }}/{{ ds_c2.changed }}/{{ ds_u1.changed }}/{{ ds_u2.changed }}/{{ ds_d1.changed }}/{{ ds_d2.changed }}

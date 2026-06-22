@@ -1,0 +1,4 @@
+ansible-core>=2.15
+pytest>=7.0
+pytest-mock>=3.0
+antsibull-changelog>=0.22.0

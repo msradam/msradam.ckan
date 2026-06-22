@@ -1,0 +1,30 @@
+---
+name: Sanity
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  sanity:
+    name: "ansible-test sanity (Python ${{ matrix.python }})"
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python: ["3.11", "3.12"]
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          path: ansible_collections/msradam/ckan
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "${{ matrix.python }}"
+
+      - name: Install ansible-core
+        run: pip install "ansible-core>=2.15"
+
+      - name: Run sanity tests
+        working-directory: ansible_collections/msradam/ckan
+        run: ansible-test sanity --python "${{ matrix.python }}" --local
