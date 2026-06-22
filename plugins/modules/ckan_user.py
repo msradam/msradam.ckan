@@ -62,6 +62,9 @@ options:
   about:
     description: Short biography or description of the user.
     type: str
+  image_url:
+    description: URL of the user's avatar image.
+    type: str
   sysadmin:
     description:
       - Whether the user has sysadmin privileges. Only a sysadmin can set this.
@@ -172,6 +175,10 @@ user:
       description: Short biography.
       returned: always
       type: str
+    image_url:
+      description: URL of the user's avatar image.
+      returned: always
+      type: str
     state:
       description: Lifecycle state, V(active) or V(deleted).
       returned: always
@@ -218,6 +225,7 @@ SCALAR_FIELDS = {
     'email': 'email',
     'fullname': 'fullname',
     'about': 'about',
+    'image_url': 'image_url',
     'sysadmin': 'sysadmin',
 }
 
@@ -334,6 +342,7 @@ def run_module():
         password=dict(type='str', no_log=True),
         fullname=dict(type='str'),
         about=dict(type='str'),
+        image_url=dict(type='str'),
         sysadmin=dict(type='bool'),
     )
 

@@ -258,6 +258,102 @@
         name: "{{ ds }}"
       register: ds_info
 
+    # ── resource ──────────────────────────────────────────────────────────────
+    - name: Resource - create
+      msradam.ckan.ckan_resource:
+        package_id: "{{ ds }}"
+        name: smoke-csv
+        resource_url: http://example.com/smoke.csv
+        format: CSV
+        state: present
+      register: res_c1
+
+    - name: Resource - create again (idempotent)
+      msradam.ckan.ckan_resource:
+        package_id: "{{ ds }}"
+        name: smoke-csv
+        resource_url: http://example.com/smoke.csv
+        format: CSV
+        state: present
+      register: res_c2
+
+    - name: Resource - update url
+      msradam.ckan.ckan_resource:
+        package_id: "{{ ds }}"
+        name: smoke-csv
+        resource_url: http://example.com/smoke-v2.csv
+        state: present
+      register: res_u1
+
+    - name: Resource - info
+      msradam.ckan.ckan_resource_info:
+        id: "{{ res_c1.resource.id }}"
+      register: res_info
+
+    - name: Resource - delete
+      msradam.ckan.ckan_resource:
+        package_id: "{{ ds }}"
+        name: smoke-csv
+        state: absent
+      register: res_d1
+
+    - name: Resource - delete again (idempotent)
+      msradam.ckan.ckan_resource:
+        package_id: "{{ ds }}"
+        name: smoke-csv
+        state: absent
+      register: res_d2
+
+    - name: Resource - assert
+      ansible.builtin.assert:
+        that:
+          - res_c1 is changed
+          - res_c2 is not changed
+          - res_u1 is changed
+          - res_info.resource.id == res_c1.resource.id
+          - res_d1 is changed
+          - res_d2 is not changed
+
+    # ── group member ──────────────────────────────────────────────────────────
+    - name: Group member - add user
+      msradam.ckan.ckan_group_member:
+        group: "{{ grp }}"
+        username: "{{ smoke_user }}"
+        capacity: member
+        state: present
+      register: gm_c1
+
+    - name: Group member - add again (idempotent)
+      msradam.ckan.ckan_group_member:
+        group: "{{ grp }}"
+        username: "{{ smoke_user }}"
+        capacity: member
+        state: present
+      register: gm_c2
+
+    - name: Group member - promote to editor
+      msradam.ckan.ckan_group_member:
+        group: "{{ grp }}"
+        username: "{{ smoke_user }}"
+        capacity: editor
+        state: present
+      register: gm_u1
+
+    - name: Group member - remove
+      msradam.ckan.ckan_group_member:
+        group: "{{ grp }}"
+        username: "{{ smoke_user }}"
+        state: absent
+      register: gm_d1
+
+    - name: Group member - assert
+      ansible.builtin.assert:
+        that:
+          - gm_c1 is changed
+          - gm_c2 is not changed
+          - gm_u1 is changed
+          - gm_d1 is changed
+
     - name: Dataset - soft delete
       msradam.ckan.ckan_dataset:
         name: "{{ ds }}"

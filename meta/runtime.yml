@@ -9,6 +9,9 @@ action_groups:
     - ckan_organization_info
     - ckan_organization_member
     - ckan_group
+    - ckan_group_member
     - ckan_user
     - ckan_user_info
+    - ckan_resource
+    - ckan_resource_info
     - ckan_status_info

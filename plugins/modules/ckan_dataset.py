@@ -93,6 +93,13 @@ options:
         tags. Pass an empty list to remove all tags.
     type: list
     elements: str
+  groups:
+    description:
+      - Thematic groups to assign the dataset to, given as a list of group
+        name slugs. The provided list replaces the existing group membership.
+        Pass an empty list to remove the dataset from all groups.
+    type: list
+    elements: str
   extras:
     description:
       - Free-form key/value metadata. The provided mapping replaces the existing
@@ -252,6 +259,11 @@ dataset:
       returned: always
       type: list
       elements: dict
+    groups:
+      description: Thematic groups the dataset belongs to, as a list of dicts with a V(name) key.
+      returned: always
+      type: list
+      elements: dict
     extras:
       description: Custom metadata as a list of C({key, value}) dicts.
       returned: always
@@ -339,12 +351,18 @@ def desired_extras(params):
     return {to_text(k): to_text(v) for k, v in params['extras'].items()}
 
 
+def desired_groups(params):
+    if params.get('groups') is None:
+        return None
+    return sorted(set(params['groups']))
+
+
 def owner_org_matches(existing, value):
     org = existing.get('organization') or {}
     return value in (existing.get('owner_org'), org.get('id'), org.get('name'))
 
 
-def compute_changes(existing, scalars, tags, extras):
+def compute_changes(existing, scalars, tags, groups, extras):
     """Return (changes, before, after) for the fields that differ."""
     changes = {}
     before = {}
@@ -370,6 +388,14 @@ def compute_changes(existing, scalars, tags, extras):
             before['tags'] = current
             after['tags'] = wanted
 
+    if groups is not None:
+        wanted = sorted(set(groups))
+        current = sorted({g['name'] for g in existing.get('groups', [])})
+        if current != wanted:
+            changes['groups'] = [{'name': g} for g in wanted]
+            before['groups'] = current
+            after['groups'] = wanted
+
     if extras is not None:
         current = {e['key']: e['value'] for e in existing.get('extras', [])}
         if current != extras:
@@ -389,6 +415,7 @@ def handle_present(module, client, existing):
     params = module.params
     scalars = desired_scalars(params)
     tags = desired_tags(params)
+    groups = desired_groups(params)
     extras = desired_extras(params)
 
     if existing is None:
@@ -396,6 +423,8 @@ def handle_present(module, client, existing):
         payload.update(scalars)
         if tags is not None:
             payload['tags'] = [{'name': t} for t in tags]
+        if groups is not None:
+            payload['groups'] = [{'name': g} for g in groups]
         if extras is not None:
             payload['extras'] = [{'key': k, 'value': v} for k, v in sorted(extras.items())]
         diff = {'before': {}, 'after': payload}
@@ -407,7 +436,7 @@ def handle_present(module, client, existing):
             fail_from_api(module, exc)
         module.exit_json(changed=True, dataset=result, diff=diff)
 
-    changes, before, after = compute_changes(existing, scalars, tags, extras)
+    changes, before, after = compute_changes(existing, scalars, tags, groups, extras)
     diff = {'before': before, 'after': after}
     if not changes:
         module.exit_json(changed=False, dataset=existing, diff=diff)
@@ -470,6 +499,7 @@ def run_module():
         maintainer=dict(type='str'),
         maintainer_email=dict(type='str'),
         tags=dict(type='list', elements='str'),
+        groups=dict(type='list', elements='str'),
         extras=dict(type='dict'),
         purge=dict(type='bool', default=False),
     )

@@ -101,6 +101,10 @@ user:
       description: Short biography.
       returned: always
       type: str
+    image_url:
+      description: URL of the user's avatar image.
+      returned: always
+      type: str
     state:
       description: Lifecycle state, V(active) or V(deleted).
       returned: always

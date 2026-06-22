@@ -15,16 +15,19 @@ and the upstream `ckan/ckan-docker` compose.
 | `msradam.ckan.ckan_dataset` | Create, update, and delete datasets |
 | `msradam.ckan.ckan_dataset_info` | Fetch a single dataset |
 | `msradam.ckan.ckan_dataset_search` | Search datasets with Solr query syntax |
+| `msradam.ckan.ckan_resource` | Create, update, and delete resources attached to a dataset |
+| `msradam.ckan.ckan_resource_info` | Fetch a single resource by UUID |
 | `msradam.ckan.ckan_organization` | Create, update, and delete organizations |
 | `msradam.ckan.ckan_organization_info` | Fetch a single organization |
 | `msradam.ckan.ckan_organization_member` | Manage user membership and roles in an organization |
 | `msradam.ckan.ckan_group` | Create, update, and delete thematic groups |
+| `msradam.ckan.ckan_group_member` | Manage user membership and roles in a group |
 | `msradam.ckan.ckan_user` | Create, update, and delete users |
 | `msradam.ckan.ckan_user_info` | Fetch a single user |
 | `msradam.ckan.ckan_status_info` | Fetch site status and version |
 
-All state modules (`ckan_dataset`, `ckan_organization`, `ckan_group`, `ckan_user`,
-`ckan_organization_member`) support `check_mode` and `diff_mode`.
+All state modules (`ckan_dataset`, `ckan_resource`, `ckan_organization`, `ckan_group`, `ckan_user`,
+`ckan_organization_member`, `ckan_group_member`) support `check_mode` and `diff_mode`.
 
 ## Requirements
 
