@@ -6,15 +6,14 @@ readme: README.md
 authors:
   - Adam Munawar Rahman
 description: Ansible modules for managing CKAN open-data portal resources (datasets, organizations, users, groups, resources, API tokens) via the Action API
-license: GPL-3.0-or-later
-license_file: COPYING
+license:
+  - GPL-3.0-or-later
 tags:
   - ckan
   - opendata
   - data
   - datacatalog
   - portal
-  - open-data
   - api
 dependencies: {}
 repository: https://github.com/msradam/msradam.ckan
