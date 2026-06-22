@@ -24,6 +24,7 @@ and the upstream `ckan/ckan-docker` compose.
 | `msradam.ckan.ckan_group_member` | Manage user membership and roles in a group |
 | `msradam.ckan.ckan_user` | Create, update, and delete users |
 | `msradam.ckan.ckan_user_info` | Fetch a single user |
+| `msradam.ckan.ckan_api_token` | Create and revoke API tokens for a user |
 | `msradam.ckan.ckan_status_info` | Fetch site status and version |
 
 All state modules (`ckan_dataset`, `ckan_resource`, `ckan_organization`, `ckan_group`, `ckan_user`,

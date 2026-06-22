@@ -14,4 +14,5 @@ action_groups:
     - ckan_user_info
     - ckan_resource
     - ckan_resource_info
+    - ckan_api_token
     - ckan_status_info

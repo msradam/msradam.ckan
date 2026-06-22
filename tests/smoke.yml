@@ -381,6 +381,53 @@
           - ds_d1 is changed
           - ds_d2 is not changed
 
+    # ── api token ─────────────────────────────────────────────────────────────
+    - name: Token - revoke pre-existing (clean slate)
+      msradam.ckan.ckan_api_token:
+        user: ckan_admin
+        name: ansible-smoke-token
+        state: absent
+
+    - name: Token - create
+      msradam.ckan.ckan_api_token:
+        user: ckan_admin
+        name: ansible-smoke-token
+        state: present
+      register: tok_c1
+      no_log: true
+
+    - name: Token - create again (idempotent)
+      msradam.ckan.ckan_api_token:
+        user: ckan_admin
+        name: ansible-smoke-token
+        state: present
+      register: tok_c2
+      no_log: true
+
+    - name: Token - revoke
+      msradam.ckan.ckan_api_token:
+        user: ckan_admin
+        name: ansible-smoke-token
+        state: absent
+      register: tok_d1
+
+    - name: Token - revoke again (idempotent)
+      msradam.ckan.ckan_api_token:
+        user: ckan_admin
+        name: ansible-smoke-token
+        state: absent
+      register: tok_d2
+
+    - name: Token - assert
+      ansible.builtin.assert:
+        that:
+          - tok_c1 is changed
+          - tok_c1.token_value != ''
+          - tok_c2 is not changed
+          - tok_c2.token_value == ''
+          - tok_d1 is changed
+          - tok_d2 is not changed
+
     # ── cleanup ───────────────────────────────────────────────────────────────
     - name: Cleanup dataset
       msradam.ckan.ckan_dataset:
